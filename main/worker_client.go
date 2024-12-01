@@ -16,14 +16,16 @@ func main() {
 	if *port == "" {
 		log.Fatal("Must specify a port")
 	}
-	handler := new(localrpc.MapRequest)
+	addr := "localhost:" + *port
+
+	handler := localrpc.NewMapRequest(addr)
 	server := rpc.NewServer() // create a server
 	err := server.Register(handler)
 	utilis.CheckError(err)
-	addr := "localhost:" + *port
 	lis, err := net.Listen("tcp", addr) // create a listener that handles RPCs
+	defer lis.Close()
 	utilis.CheckError(err)
-	log.Printf("RPC server listens on port %d", 8888)
+	log.Printf("RPC server listens on port %d", port)
 	// Go specs: The caller typically invokes Accept in a go statement
 	go func() {
 		for {

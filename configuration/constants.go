@@ -1,7 +1,7 @@
 package configuration
 
 const FILE_SIZE = 30
-const MAX_RANDOM_NUMBER = 10000
+const MAX_RANDOM_NUMBER = 100
 const FILE_NAME = "random.txt"
 const HOSTS_NUMBER = 3
 
