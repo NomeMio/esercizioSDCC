@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	port := flag.String("port", "", "The port to connect to")
+	port := flag.String("p", "", "The port to connect to")
 	flag.Parse()
 	if *port == "" {
 		log.Fatal("Must specify a port")
@@ -25,7 +25,7 @@ func main() {
 	lis, err := net.Listen("tcp", addr) // create a listener that handles RPCs
 	defer lis.Close()
 	utilis.CheckError(err)
-	log.Printf("RPC server listens on port %d", port)
+	log.Printf("RPC server listens on port %s", *port)
 	// Go specs: The caller typically invokes Accept in a go statement
 	go func() {
 		for {

@@ -9,19 +9,25 @@ import (
 	"sync"
 )
 
+// struttura su cui si registra del rpc
 type MapRequest struct {
 	frequency map[int][]int
 	lock      sync.Locker
 	address   string
 }
+
+// arogmento della chiamata MapGetResult che rappresenta lo shard del file
 type MapArguemnt struct {
 	InputString string
 }
+
+// ritorno della chiamata MapGetResult che ci indica il valore massimo e minimo tra le chiavi ricavate
 type MapReply struct {
 	MaxValue int
 	MinValue int
 }
 
+// inizializza la struttura MapRequest da scrivere nel registro rpc
 func NewMapRequest(host string) MapRequest {
 	newObj := MapRequest{frequency: make(map[int][]int), lock: new(sync.Mutex)}
 	newObj.address = host
@@ -34,7 +40,9 @@ func (r MapRequest) MapAppending(key int, value int) {
 	r.lock.Unlock()
 }
 
+// effettua la mappatura dello shard nella mappa frequency e ritorna il valore massim e minimo fra le chiavi della mappa
 func (r MapRequest) MapGetResult(arguemnt MapArguemnt, reply *MapReply) error {
+	//TODO vedere cosa fare in caso di chiamate duplicate
 	if len(r.frequency) != 0 {
 		r.frequency = make(map[int][]int)
 	}

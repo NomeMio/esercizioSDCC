@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-func GenerateRandomIntsFIle() (string, error) {
+func GenerateRandomIntsFIle(number int, max int) (string, error) {
 	file, err := os.Create(configuration.FILE_NAME)
 	if err != nil {
 		fmt.Println("Error creating file:", err)
@@ -21,9 +21,9 @@ func GenerateRandomIntsFIle() (string, error) {
 		err = file.Close()
 	}(file)
 
-	for i := 0; i < configuration.FILE_SIZE; i++ {
-		stringValue := fmt.Sprintf("%d", rand.IntN(configuration.MAX_RANDOM_NUMBER))
-		if i != configuration.FILE_SIZE-1 {
+	for i := 0; i < number; i++ {
+		stringValue := fmt.Sprintf("%d", rand.IntN(max))
+		if i != max-1 {
 			stringValue = stringValue + " "
 		}
 		_, err = file.WriteString(stringValue)
@@ -60,8 +60,8 @@ func ReadInts(buffer *bufio.Reader, amount int) (string, error) {
 	}
 }
 
-func GetStrings(nome string) []string {
-	valuesForHost := int(math.Round(configuration.FILE_SIZE / configuration.HOSTS_NUMBER))
+func GetStrings(nome string, numberOfHosts int, filesSize int) []string {
+	valuesForHost := int(math.Round(float64(filesSize) / float64(numberOfHosts)))
 	var err error
 	var arrayStrings []string
 	file, err := os.Open(nome)
@@ -69,9 +69,9 @@ func GetStrings(nome string) []string {
 	defer func(file *os.File) {
 		err = file.Close()
 	}(file)
-	remaining := configuration.FILE_SIZE
+	remaining := filesSize
 	reader := bufio.NewReader(file)
-	for i := 0; i < configuration.HOSTS_NUMBER; i++ {
+	for i := 0; i < numberOfHosts; i++ {
 		var testo string
 		if remaining-2*valuesForHost < 0 {
 			valuesForHost = remaining
