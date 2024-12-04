@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"esercizioSDCC/utilis"
 	"fmt"
+	"log"
+	"net/rpc"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,14 +13,19 @@ import (
 
 // struttura su cui si registra del rpc
 type MapRequest struct {
-	frequency map[int][]int
+	frequency map[int][]int //valori dell'host
 	lock      sync.Locker
-	address   string
+	//aggiungi contatore host per sincronia
+	address string
 }
 
-// arogmento della chiamata MapGetResult che rappresenta lo shard del file
-type MapArguemnt struct {
+// argomento della chiamata MapGetResult che rappresenta lo shard del file
+type MapArgument struct {
 	InputString string
+}
+
+type ReduceArgument struct {
+	InputMap map[int][]int
 }
 
 // ritorno della chiamata MapGetResult che ci indica il valore massimo e minimo tra le chiavi ricavate
@@ -41,12 +48,12 @@ func (r MapRequest) MapAppending(key int, value int) {
 }
 
 // effettua la mappatura dello shard nella mappa frequency e ritorna il valore massim e minimo fra le chiavi della mappa
-func (r MapRequest) MapGetResult(arguemnt MapArguemnt, reply *MapReply) error {
+func (r MapRequest) MapGetResult(argument MapArgument, reply *MapReply) error {
 	//TODO vedere cosa fare in caso di chiamate duplicate
 	if len(r.frequency) != 0 {
 		r.frequency = make(map[int][]int)
 	}
-	tokens := strings.Fields(arguemnt.InputString)
+	tokens := strings.Fields(argument.InputString)
 	var minMax [2]int
 	for value, token := range tokens {
 		atoi, err := strconv.Atoi(token)
@@ -69,13 +76,51 @@ func (r MapRequest) MapGetResult(arguemnt MapArguemnt, reply *MapReply) error {
 	reply.MaxValue = minMax[1]
 	return nil
 }
+func (r MapRequest) CASO(key int, value int) {
+	r.lock.Lock()
+	r.frequency[key] = append(r.frequency[key], value)
+	r.lock.Unlock()
+}
 
-func (r MapRequest) ShowMyRange(arguemnt []ReduceMap, reply *ReduceReply) error {
-	for _, item := range arguemnt {
-		if item.Host == r.address {
-			fmt.Printf("my range is %v\n", item.KeyRange)
+func (r MapRequest) SendMapValues(argument ReduceArgument, reply *MapReply) {
+	// Ensure r.frequency is initialized
+	if r.frequency == nil {
+		r.frequency = make(map[int][]int) // Replace KeyType and ValueType with the actual types
+	}
+
+	// Add the values from 'argument' to 'r.frequency'
+	for key, value := range argument.InputMap {
+		r.frequency[key] = value
+	}
+}
+
+func (r MapRequest) StartValuesExchange(arguments []ReduceMap, reply *ReduceReply) error {
+	for _, item := range arguments {
+		if item.Host != r.address {
+			fmt.Printf("Host %s processing range: %v\n", r.address, item.KeyRange)
+
+			// Filter data by key range
+			filteredResults := make(map[int][]int)
+			for key, value := range r.frequency { // Ciclo sui valori che il singolo host ha
+				if key >= item.KeyRange[0] && key <= item.KeyRange[1] {
+					filteredResults[key] = value // Mappato valore su nuovo range (corretto)
+					delete(r.frequency, key)     // Eliminazione del valore mappato dal vecchio range
+				}
+			}
+			// Print filtered results for debugging
+			fmt.Printf("Host %s filtered results: %v\n", r.address, filteredResults)
+
+			//Send Map Values
+			go func() {
+				client, err1 := rpc.Dial("tcp", item.Host) //inizializzo connesione
+				utilis.CheckError(err1)
+				log.Printf("Call to RPC server %s\n", item.Host)
+				err2 := client.Call("MapRequest.SendMapValues", filteredResults, nil)
+				utilis.CheckError(err2)
+			}()
 		}
 	}
+	//todo aspetta contatore di tutti gli host
 	return nil
 }
 
