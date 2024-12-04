@@ -20,7 +20,7 @@ type connectionStruct struct {
 }
 
 func makeMapRequest(client connectionStruct, input string) ([2]int, error) {
-	args := localrpc.MapArguemnt{InputString: input} // create the RPC arguments
+	args := localrpc.MapArgument{InputString: input} // create the RPC arguments
 	reply := localrpc.MapReply{}
 	log.Printf("Call to RPC server %s\n", client.addr)
 	err := client.conn.Call("MapRequest.MapGetResult", args, &reply)
@@ -32,15 +32,23 @@ func makeMapRequest(client connectionStruct, input string) ([2]int, error) {
 }
 
 func makeReduceRequest(client connectionStruct, shuffledKeys []localrpc.ReduceMap) error {
-	log.Printf("Call to RPC server %s\n", client.addr)
+	log.Printf("Starting reduce phase with host %s\n", client.addr)
+
+	// Initialize a structure for the reply
 	reply := localrpc.ReduceReply{}
-	err := client.conn.Call("MapRequest.ShowMyRange", shuffledKeys, &reply)
+
+	// Perform the RPC call
+	err := client.conn.Call("MapRequest.StartValuesExchange", shuffledKeys, &reply)
 	utilis.CheckError(err)
+
+	// Print the reply for debugging
+	log.Printf("Host %s returned reduce reply: %s\n", client.addr, reply.Reply)
+
 	return nil
 }
 
 func startWorker(addr string) *rpc.Client {
-	client, err := rpc.Dial("tcp", addr)
+	client, err := rpc.Dial("tcp", addr) //inizializzo connesione
 	utilis.CheckError(err)
 	println(addr, "worker started")
 	return client
@@ -142,5 +150,8 @@ func starWorkers(array []string) {
 		}()
 	}
 	wg.Wait()
+
+	// Print final aggregated results after the reduce phase
+	//fmt.Printf("Final aggregated results: %v\n", finalResults)
 
 }
