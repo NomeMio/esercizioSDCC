@@ -67,7 +67,7 @@ func main() {
 
 	//Controlla che gli indirizzi siano legali attravesro una regex
 	maxNUmber = *maxIntNumber
-	numbersOfHosts = *numberOfIntsGenerated
+	numberOfInts = *numberOfIntsGenerated
 	hostsSplitted := strings.Split(*hostsFlag, ",")
 	regex := regexp.MustCompile(configuration.ADDREDSSPATTERN)
 	for _, temp := range hostsSplitted {
@@ -78,7 +78,7 @@ func main() {
 	}
 	hosts = make([]string, len(hostsSplitted))
 	copy(hosts, hostsSplitted)
-	numbersOfHosts := len(hosts)
+	numbersOfHosts = len(hosts)
 
 	fmt.Println("Server started")
 	nome, err := utilis.GenerateRandomIntsFIle(numberOfInts, maxNUmber) //genero il file
