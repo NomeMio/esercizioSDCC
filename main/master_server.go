@@ -92,7 +92,7 @@ func main() {
 	nome, err := utilis.GenerateRandomIntsFIle(numberOfInts, maxNUmber) //genero il file
 	array := utilis.GetStrings(nome, numbersOfHosts, numberOfInts)      //splitto il file in shard per i client
 	utilis.CheckError(err)
-	fmt.Println("Generated ", numberOfIntsGenerated, "integers values at ", nome)
+	//fmt.Println("Generated ", *numberOfIntsGenerated, "integers values at ", nome)
 	starWorkers(array) //inizio a far lavorare gli worker
 
 }

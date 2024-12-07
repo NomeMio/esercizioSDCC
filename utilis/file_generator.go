@@ -23,7 +23,7 @@ func GenerateRandomIntsFIle(number int, max int) (string, error) {
 
 	for i := 0; i < number; i++ {
 		stringValue := fmt.Sprintf("%d", rand.IntN(max))
-		if i != max-1 {
+		if i != number-1 {
 			stringValue = stringValue + " "
 		}
 		_, err = file.WriteString(stringValue)
