@@ -76,6 +76,7 @@ func main() {
 	//Controlla che gli indirizzi siano legali attravesro una regex
 	maxNUmber = *maxIntNumber
 	numberOfInts = *numberOfIntsGenerated
+	//println(maxNUmber, numberOfInts)
 	hostsSplitted := strings.Split(*hostsFlag, ",")
 	regex := regexp.MustCompile(configuration.ADDREDSSPATTERN)
 	for _, temp := range hostsSplitted {

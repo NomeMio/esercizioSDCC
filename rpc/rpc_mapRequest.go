@@ -121,7 +121,17 @@ func (r MapRequest) StartValuesExchange(arguments []ReduceMap, reply *ReduceRepl
 			}()
 		}
 	}
-	//todo aspetta contatore di tutti gli host
+	for i := 1; i <= toWait; i++ {
+		<-r.done
+	}
+	log.Printf("I'm the host %s con valori in range [] e pari a:\n%v\n", r.address, r.frequency)
+	a := 0
+	for _, item := range r.frequency {
+		for range item {
+			a++
+		}
+	}
+	println(a, " numbers")
 	return nil
 }
 

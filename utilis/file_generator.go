@@ -20,7 +20,6 @@ func GenerateRandomIntsFIle(number int, max int) (string, error) {
 	defer func(file *os.File) {
 		err = file.Close()
 	}(file)
-
 	for i := 0; i < number; i++ {
 		stringValue := fmt.Sprintf("%d", rand.IntN(max))
 		if i != number-1 {
