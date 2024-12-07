@@ -28,9 +28,10 @@ func main() {
 	log.Printf("RPC server listens on port %s", *port)
 	// Go specs: The caller typically invokes Accept in a go statement
 	go func() {
-		for {
-			server.Accept(lis) // register the listener and accept inbound RPCs
-		}
+		server.Accept(lis) // register the listener and accept inbound RPCs
 	}()
-	select {}
+	select {
+	case <-handler.DoneWorking:
+		return
+	}
 }

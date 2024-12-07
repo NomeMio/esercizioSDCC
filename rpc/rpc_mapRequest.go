@@ -1,22 +1,21 @@
 package rpc
 
 import (
-	"encoding/json"
 	"esercizioSDCC/utilis"
-	"log"
 	"net/rpc"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 )
 
 // struttura su cui si registra del rpc
-type MapRequest struct {
-	frequency map[int][]int //valori dell'host
-	lock      sync.Locker
-	//aggiungi contatore host per sincronia
-	address string
-	done    chan bool
+type RpcMapReduce struct {
+	frequency   map[int][]int //valori dell'host
+	lock        sync.Locker   //aggiungi contatore host per sincronia
+	address     string
+	donePeers   chan bool
+	DoneWorking chan bool
 }
 
 // argomento della chiamata MapGetResult che rappresenta lo shard del file
@@ -34,26 +33,29 @@ type MapReply struct {
 	MinValue int
 }
 
-// inizializza la struttura MapRequest da scrivere nel registro rpc
-func NewMapRequest(host string) MapRequest {
-	newObj := MapRequest{frequency: make(map[int][]int), lock: new(sync.Mutex)}
+// inizializza la struttura RpcMapReduce da scrivere nel registro rpc
+func NewMapRequest(host string) RpcMapReduce {
+	newObj := RpcMapReduce{frequency: make(map[int][]int), lock: new(sync.Mutex)}
 	newObj.address = host
-	newObj.done = make(chan bool)
+	newObj.donePeers = make(chan bool)
+	newObj.DoneWorking = make(chan bool)
 	return newObj
 }
 
-func (r MapRequest) MapAppending(key int, value int) {
+func (r RpcMapReduce) MapAppending(key int, value int) {
 	r.lock.Lock()
 	r.frequency[key] = append(r.frequency[key], value)
 	r.lock.Unlock()
 }
 
+func (r RpcMapReduce) MapRemove(key int) {
+	r.lock.Lock()
+	delete(r.frequency, key)
+	r.lock.Unlock()
+}
+
 // effettua la mappatura dello shard nella mappa frequency e ritorna il valore massim e minimo fra le chiavi della mappa
-func (r MapRequest) MapGetResult(argument MapArgument, reply *MapReply) error {
-	//TODO vedere cosa fare in caso di chiamate duplicate
-	if len(r.frequency) != 0 {
-		r.frequency = make(map[int][]int)
-	}
+func (r RpcMapReduce) MapGetResult(argument MapArgument, reply *MapReply) error {
 	tokens := strings.Fields(argument.InputString)
 	var minMax [2]int
 	for value, token := range tokens {
@@ -67,73 +69,85 @@ func (r MapRequest) MapGetResult(argument MapArgument, reply *MapReply) error {
 		} else if atoi > minMax[1] {
 			minMax[1] = atoi
 		}
-
 		r.MapAppending(atoi, 1)
 	}
-	jsonString, err := json.Marshal(r.frequency)
-	utilis.CheckError(err)
-	print(string(jsonString))
+	//jsonString, err := json.Marshal(r.frequency)
+	//utilis.CheckError(err)
+	//println("Ricevuto :", string(jsonString))
 	reply.MinValue = minMax[0]
 	reply.MaxValue = minMax[1]
 	return nil
 }
 
-func (r MapRequest) SendMapValues(argument ReduceArgument, reply *MapReply) error {
-	// Ensure r.frequency is initialized
-	if r.frequency == nil {
-		r.frequency = make(map[int][]int) // Replace KeyType and ValueType with the actual types
-	}
-
+func (r RpcMapReduce) SendMapValues(argument ReduceArgument, reply *MapReply) error {
 	// Add the values from 'argument' to 'r.frequency'
 	for key, value := range argument.InputMap {
 		for _, x := range value {
 			r.MapAppending(key, x)
 		}
 	}
-	r.done <- true
+	r.donePeers <- true
 	return nil
 }
 
-func (r MapRequest) StartValuesExchange(arguments []ReduceMap, reply *ReduceReply) error {
+func (r RpcMapReduce) StartValuesExchange(arguments []ReduceMap, reply *ReduceReply) error {
 	toWait := len(arguments) - 1
 	for _, item := range arguments {
 		if item.Host != r.address {
-			//fmt.Printf("Host %s processing range: %v\n", r.address, item.KeyRange)
-
 			// Filter data by key range
 			filteredResults := make(map[int][]int)
 			for key, value := range r.frequency { // Ciclo sui valori che il singolo host ha
 				if key >= item.KeyRange[0] && key <= item.KeyRange[1] {
 					filteredResults[key] = value // Mappato valore su nuovo range (corretto)
-					delete(r.frequency, key)     // Eliminazione del valore mappato dal vecchio range
+					r.MapRemove(key)             // Eliminazione del valore mappato dal vecchio range
 				}
 			}
-			// Print filtered results for debugging
-			//fmt.Printf("Host %s filtered results: %v\n", r.address, filteredResults)
+			//log.Printf("Sending to %s values  %v\n", item.Host, filteredResults)
 			argumentReduce := ReduceArgument{filteredResults}
-			//Send Map Values
 			go func() {
 				client, err1 := rpc.Dial("tcp", item.Host) //inizializzo connesione
 				utilis.CheckError(err1)
-				log.Printf("Call to RPC server %s\n", item.Host)
-				err2 := client.Call("MapRequest.SendMapValues", argumentReduce, nil)
+				err2 := client.Call("RpcMapReduce.SendMapValues", argumentReduce, nil)
 				utilis.CheckError(err2)
 			}()
 		}
 	}
 	for i := 1; i <= toWait; i++ {
-		<-r.done
+		<-r.donePeers
 	}
-	log.Printf("I'm the host %s con valori in range [] e pari a:\n%v\n", r.address, r.frequency)
-	a := 0
-	for _, item := range r.frequency {
-		for range item {
-			a++
+	//log.Printf("I'm the host %s con valori :\n%v\n", r.address, r.frequency)
+	//log.Printf("Reducing\n")
+	for key, value := range r.frequency {
+		lenght := len(value)
+		split := []int{lenght}
+		r.frequency[key] = split
+	}
+	//log.Printf("%v\n", r.frequency)
+	//log.Printf("%v\n", r.frequency)
+	stringa := ""
+	var keys []int
+	for key := range r.frequency {
+		keys = append(keys, key)
+	}
+	sort.Ints(keys)
+	for _, key := range keys {
+		value := r.frequency[key]
+		for i := 0; i < value[0]; i++ {
+			stringa += strconv.Itoa(key) + " "
 		}
 	}
-	println(a, " numbers")
+	reply.Reply = stringa
+	return nil
+
+}
+
+func (r RpcMapReduce) EndConnection(arguments EmptyArgument, reply *EmptyReply) error {
+	r.DoneWorking <- true
 	return nil
 }
+
+type EmptyArgument struct{}
+type EmptyReply struct{}
 
 type ReduceReply struct {
 	Reply string

@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"net/rpc"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -23,7 +24,7 @@ func makeMapRequest(client connectionStruct, input string) ([2]int, error) {
 	args := localrpc.MapArgument{InputString: input} // create the RPC arguments
 	reply := localrpc.MapReply{}
 	log.Printf("Call to RPC server %s\n", client.addr)
-	err := client.conn.Call("MapRequest.MapGetResult", args, &reply)
+	err := client.conn.Call("RpcMapReduce.MapGetResult", args, &reply)
 	if err != nil {
 		return [2]int{}, err
 	}
@@ -31,20 +32,27 @@ func makeMapRequest(client connectionStruct, input string) ([2]int, error) {
 	return [2]int{reply.MinValue, reply.MaxValue}, nil
 }
 
-func makeReduceRequest(client connectionStruct, shuffledKeys []localrpc.ReduceMap) error {
+func makeReduceRequest(client connectionStruct, shuffledKeys []localrpc.ReduceMap) (localrpc.ReduceReply, error) {
 	log.Printf("Starting reduce phase with host %s\n", client.addr)
 
 	// Initialize a structure for the reply
 	reply := localrpc.ReduceReply{}
-
 	// Perform the RPC call
-	err := client.conn.Call("MapRequest.StartValuesExchange", shuffledKeys, &reply)
+	err := client.conn.Call("RpcMapReduce.StartValuesExchange", shuffledKeys, &reply)
 	utilis.CheckError(err)
 
 	// Print the reply for debugging
-	log.Printf("Host %s returned reduce reply: %s\n", client.addr, reply.Reply)
+	//log.Printf("Host %s returned reduce reply: %s\n", client.addr, reply.Reply)
 
-	return nil
+	return reply, nil
+}
+
+func endConnection(client connectionStruct) {
+	tso := localrpc.EmptyArgument{}
+	err := client.conn.Call("RpcMapReduce.EndConnection", tso, nil)
+	utilis.CheckError(err)
+	client.conn.Close()
+
 }
 
 func startWorker(addr string) *rpc.Client {
@@ -93,7 +101,6 @@ func main() {
 	nome, err := utilis.GenerateRandomIntsFIle(numberOfInts, maxNUmber) //genero il file
 	array := utilis.GetStrings(nome, numbersOfHosts, numberOfInts)      //splitto il file in shard per i client
 	utilis.CheckError(err)
-	//fmt.Println("Generated ", *numberOfIntsGenerated, "integers values at ", nome)
 	starWorkers(array) //inizio a far lavorare gli worker
 
 }
@@ -140,19 +147,30 @@ func starWorkers(array []string) {
 		maxIterator += numberOfKeys
 	}
 	fmt.Printf("map of keys:%v\n", shuffleChiavi)
+	resultsOfComputation := make([]localrpc.ReduceReply, numbersOfHosts)
 	wg = sync.WaitGroup{}
-	for _, token := range connections {
+	for pos, token := range connections {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := makeReduceRequest(token, shuffleChiavi[:])
+
+			replyReduce, err := makeReduceRequest(token, shuffleChiavi[:])
+			resultsOfComputation[pos] = replyReduce
 			utilis.CheckError(err)
 			fmt.Printf("starting reduce in host %s\n", token.addr)
 		}()
 	}
 	wg.Wait()
+	file, err := os.Create(configuration.FILE_NAME_REPLAY)
+	defer file.Close()
+	utilis.CheckError(err)
+	for i, _ := range resultsOfComputation {
+		//log.Printf(resultsOfComputation[i].Reply)
+		file.WriteString(resultsOfComputation[i].Reply)
+	}
 
-	// Print final aggregated results after the reduce phase
-	//fmt.Printf("Final aggregated results: %v\n", finalResults)
+	for _, con := range connections {
+		endConnection(con)
+	}
 
 }
