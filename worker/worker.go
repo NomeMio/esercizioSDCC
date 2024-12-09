@@ -4,6 +4,7 @@ import (
 	"flag"
 	"net"
 	"net/rpc"
+	"os"
 	localrpc "worker/rpc"
 	"worker/utilis"
 
@@ -11,12 +12,14 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	port := flag.String("p", "", "The port to connect to")
 	flag.Parse()
+	value := os.Getenv("WORKER_NAME")
 	if *port == "" {
 		log.Fatal("Must specify a port")
 	}
-	addr := ":" + *port
+	addr := value + ":" + *port
 
 	handler := localrpc.NewMapRequest(addr)
 	server := rpc.NewServer()
@@ -25,7 +28,7 @@ func main() {
 	lis, err := net.Listen("tcp", addr)
 	defer lis.Close()
 	utilis.CheckError(err)
-	log.Printf("RPC server listens on port %s", *port)
+	log.Printf("RPC server listens on port %s", addr)
 	go func() {
 		server.Accept(lis) // Attendi la chiamata del master
 	}()

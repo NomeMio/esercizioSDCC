@@ -65,7 +65,7 @@ var maxNUmber int
 var numberOfInts int
 
 func main() {
-
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	// Inizializzo i parametri acquisiti come argomenti del programma
 	hostsFlag := flag.String("a", "", "The workesrs addreses in format host:port,host2:port2,....") //Rappresenta gli indirizzi dei worker che verranno chiamati
 	numberOfIntsGenerated := flag.Int("n", 1000, "Number of workers to use")                        //Rappresenta il numero di interi generati
@@ -147,9 +147,9 @@ func starWorkers(array []string) {
 	wg = sync.WaitGroup{}
 	for pos, token := range connections {
 		wg.Add(1)
+		log.Printf("starting reduce in host %s\n", token.addr)
 		go func() {
 			defer wg.Done()
-			log.Printf("starting reduce in host %s\n", token.addr)
 			replyReduce, err := makeReduceRequest(token, shuffleChiavi[:])
 			resultsOfComputation[pos] = replyReduce
 			utilis.CheckError(err)

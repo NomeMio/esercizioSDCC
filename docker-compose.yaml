@@ -10,14 +10,16 @@ services:
       -a
       worker1:8000,worker2:8000,worker3:8000,worker4:8000
       -n
-      1000
+      2000
       -m 
-      40
+      30
     networks:
       - internal_network
     depends_on:
       - worker1
       - worker2
+      - worker3
+      - worker4
 
   worker1:
     build:
