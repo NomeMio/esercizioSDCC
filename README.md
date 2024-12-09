@@ -1,23 +1,67 @@
 # esercizioSDCC
 
+## Run Docker Compose
+Per avviare l'ambiente con Docker Compose, eseguire il seguente comando nella cartella `esercizioSDCC`:
 
-per runnare docker compose up --build nella cartella esercizioSDCC
+```bash
+docker-compose up --build
+```
 
-per aggiungere o togliere workers bisogna modificare due cose nel file yaml:
-- 1 aggiungere/togleire nome:porto nella parte comand di master e mettere a depends
+## Modifica del numero di worker
+Per aggiungere o rimuovere worker, è necessario modificare due sezioni del file `docker-compose.yml`.
 
-- 2 aggiungere tipo (  worker2:
+### 1. Comando del master
+- Aggiungere o rimuovere `nome:porto` nella parte `command` della sezione `master`.
+
+Esempio:
+```yaml
+command: >
+  ./master
+  -a
+  worker1:8000,worker2:8000,worker3:8000
+  -n
+  1000
+  -m
+  40
+```
+Se si aggiunge un worker, aggiungere `worker4:8000`.
+
+### 2. Sezione dei worker
+- Aggiungere o rimuovere la configurazione del worker nella sezione sotto gli altri worker.
+
+Esempio di configurazione per un nuovo worker `worker4`:
+```yaml
+worker4:
   build:
-  context: ./worker
+    context: ./worker
   networks:
-  - internal_network
+    - internal_network
   ports:
-  - "8002:8000"
+    - "8004:8000"
   environment:
-  - WORKER_NAME=worker2) nell sezione sotto gli altri workere
+    - WORKER_NAME=worker4
+```
 
+## Arrestare i container
+Per fermare e rimuovere tutti i container, eseguire:
 
-docker compose down
+```bash
+docker-compose down
+```
 
+## Ispezionare il volume Docker
+Per visualizzare i dettagli del volume `eserciziosdcc_app-data`, eseguire:
+
+```bash
 docker volume inspect eserciziosdcc_app-data
+```
+
+### Visualizzare i file nel volume
+1. Recuperare il percorso di `Mountpoint` dall'output del comando precedente.
+2. Eseguire:
+
+```bash
 sudo ls -l <mountPointDelVOlume>
+```
+
+Sostituire `<mountPointDelVOlume>` con il percorso effettivo del `Mountpoint`.
