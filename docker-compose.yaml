@@ -1,15 +1,16 @@
-version: '3.8'
 
 services:
   master:
     build:
       context: ./master
+    volumes:
+      - app-data:/app/data
     command: >
       ./master
       -a
       worker1:8000,worker2:8000
       -n
-      10000
+      1000
       -m 
       40
     networks:
@@ -41,3 +42,6 @@ services:
 networks:
   internal_network:
     driver: bridge
+
+volumes:
+  app-data:

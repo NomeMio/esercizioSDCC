@@ -6,7 +6,7 @@ COPY ../go.mod  ./
 RUN go mod download && go mod verify
 
 COPY .. .
-RUN go build -v -o master master_server.go
+RUN go build -v -o master master.go
 
 
 CMD ["./master"]

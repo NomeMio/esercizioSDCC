@@ -6,7 +6,7 @@ COPY ../go.mod  ./
 RUN go mod download && go mod verify
 
 COPY .. .
-RUN go build -v -o worker worker_client.go
+RUN go build -v -o worker worker.go
 
 ENTRYPOINT ["./worker","-p=8000"]
 

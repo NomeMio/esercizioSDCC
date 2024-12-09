@@ -19,16 +19,15 @@ func main() {
 	addr := ":" + *port
 
 	handler := localrpc.NewMapRequest(addr)
-	server := rpc.NewServer() // create a server
+	server := rpc.NewServer()
 	err := server.Register(handler)
 	utilis.CheckError(err)
-	lis, err := net.Listen("tcp", addr) // create a listener that handles RPCs
+	lis, err := net.Listen("tcp", addr)
 	defer lis.Close()
 	utilis.CheckError(err)
 	log.Printf("RPC server listens on port %s", *port)
-	// Go specs: The caller typically invokes Accept in a go statement
 	go func() {
-		server.Accept(lis) // register the listener and accept inbound RPCs
+		server.Accept(lis) // Attendi la chiamata del master
 	}()
 	select {
 	case <-handler.DoneWorking:

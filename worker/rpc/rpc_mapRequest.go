@@ -15,7 +15,7 @@ type RpcMapReduce struct {
 	frequency   map[int][]int //valori dell'host
 	lock        sync.Locker   //aggiungi contatore host per sincronia
 	address     string
-	donePeers   chan bool
+	donePeers   chan ReduceArgument
 	DoneWorking chan bool
 }
 
@@ -38,7 +38,7 @@ type MapReply struct {
 func NewMapRequest(host string) RpcMapReduce {
 	newObj := RpcMapReduce{frequency: make(map[int][]int), lock: new(sync.Mutex)}
 	newObj.address = host
-	newObj.donePeers = make(chan bool)
+	newObj.donePeers = make(chan ReduceArgument, 10)
 	newObj.DoneWorking = make(chan bool)
 	return newObj
 }
@@ -82,12 +82,8 @@ func (r RpcMapReduce) MapGetResult(argument MapArgument, reply *MapReply) error 
 
 func (r RpcMapReduce) SendMapValues(argument ReduceArgument, reply *MapReply) error {
 	// Add the values from 'argument' to 'r.frequency'
-	for key, value := range argument.InputMap {
-		for _, x := range value {
-			r.MapAppending(key, x)
-		}
-	}
-	r.donePeers <- true
+
+	r.donePeers <- argument
 	return nil
 }
 
@@ -114,7 +110,12 @@ func (r RpcMapReduce) StartValuesExchange(arguments []ReduceMap, reply *ReduceRe
 		}
 	}
 	for i := 1; i <= toWait; i++ {
-		<-r.donePeers
+		result := <-r.donePeers
+		for key, value := range result.InputMap {
+			for _, x := range value {
+				r.MapAppending(key, x)
+			}
+		}
 	}
 	//log.Printf("I'm the host %s con valori :\n%v\n", r.address, r.frequency)
 	//log.Printf("Reducing\n")
