@@ -167,5 +167,6 @@ func starWorkers(array []string) {
 	for _, con := range connections {
 		endConnection(con)
 	}
+	log.Printf("finished computing, original generated file at %s computed file at %s\n", configuration.FILE_NAME_REPLAY, file.Name())
 
 }
