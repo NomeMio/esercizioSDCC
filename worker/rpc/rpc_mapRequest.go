@@ -1,12 +1,13 @@
 package rpc
 
 import (
-	"esercizioSDCC/utilis"
+	"log"
 	"net/rpc"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"worker/utilis"
 )
 
 // struttura su cui si registra del rpc
@@ -102,7 +103,7 @@ func (r RpcMapReduce) StartValuesExchange(arguments []ReduceMap, reply *ReduceRe
 					r.MapRemove(key)             // Eliminazione del valore mappato dal vecchio range
 				}
 			}
-			//log.Printf("Sending to %s values  %v\n", item.Host, filteredResults)
+			log.Printf("Sending to %s values  %v\n", item.Host, filteredResults)
 			argumentReduce := ReduceArgument{filteredResults}
 			go func() {
 				client, err1 := rpc.Dial("tcp", item.Host) //inizializzo connesione

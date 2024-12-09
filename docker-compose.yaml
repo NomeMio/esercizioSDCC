@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  master:
+    build:
+      context: ./master
+    command: >
+      ./master
+      -a
+      worker1:8000,worker2:8000
+      -n
+      10000
+      -m 
+      40
+    networks:
+      - internal_network
+    depends_on:
+      - worker1
+      - worker2
+
+  worker1:
+    build:
+      context: ./worker
+    networks:
+      - internal_network
+    ports:
+      - "8001:8000"
+    environment:
+      - WORKER_NAME=worker1
+
+  worker2:
+    build:
+      context: ./worker
+    networks:
+      - internal_network
+    ports:
+      - "8002:8000"
+    environment:
+      - WORKER_NAME=worker2
+
+networks:
+  internal_network:
+    driver: bridge

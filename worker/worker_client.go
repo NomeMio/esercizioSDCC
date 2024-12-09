@@ -1,12 +1,12 @@
 package main
 
 import (
-	localrpc "esercizioSDCC/rpc"
 	"flag"
 	"net"
 	"net/rpc"
-	//"fmt"
-	"esercizioSDCC/utilis"
+	localrpc "worker/rpc"
+	"worker/utilis"
+
 	"log"
 )
 
@@ -16,7 +16,7 @@ func main() {
 	if *port == "" {
 		log.Fatal("Must specify a port")
 	}
-	addr := "localhost:" + *port
+	addr := ":" + *port
 
 	handler := localrpc.NewMapRequest(addr)
 	server := rpc.NewServer() // create a server

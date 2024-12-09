@@ -1,16 +1,15 @@
 package main
 
 import (
-	"esercizioSDCC/configuration"
-	localrpc "esercizioSDCC/rpc"
-	"esercizioSDCC/utilis"
 	"flag"
 	"fmt"
 	"log"
+	"master/configuration"
+	localrpc "master/rpc"
+	"master/utilis"
 	"math"
 	"net/rpc"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 )
@@ -69,6 +68,7 @@ var maxNUmber int
 var numberOfInts int
 
 func main() {
+
 	// Inizializzo i parametri acquisiti come argomenti del programma
 	hostsFlag := flag.String("a", "", "The workesrs addreses in format host:port,host2:port2,....") //Rappresenta gli indirizzi dei worker che verranno chiamati
 	numberOfIntsGenerated := flag.Int("n", 1000, "Number of workers to use")                        //Rappresenta il numero di interi generati
@@ -85,14 +85,14 @@ func main() {
 	maxNUmber = *maxIntNumber
 	numberOfInts = *numberOfIntsGenerated
 	//println(maxNUmber, numberOfInts)
-	hostsSplitted := strings.Split(*hostsFlag, ",")
-	regex := regexp.MustCompile(configuration.ADDREDSSPATTERN)
-	for _, temp := range hostsSplitted {
-		if !regex.MatchString(temp) {
-			print("Invalid host: " + temp)
-			return
-		}
-	}
+	hostsSplitted := strings.Split(*hostsFlag, ",") /*
+		regex := regexp.MustCompile(configuration.ADDREDSSPATTERN)
+		for _, temp := range hostsSplitted {
+			if !regex.MatchString(temp) {
+				print("Invalid host: " + temp)
+				return
+			}
+		}*/
 	hosts = make([]string, len(hostsSplitted))
 	copy(hosts, hostsSplitted)
 	numbersOfHosts = len(hosts)

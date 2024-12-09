@@ -3,9 +3,9 @@ package utilis
 import (
 	"bufio"
 	"errors"
-	"esercizioSDCC/configuration"
 	"fmt"
 	"log"
+	"master/configuration"
 	"math"
 	"math/rand/v2"
 	"os"
