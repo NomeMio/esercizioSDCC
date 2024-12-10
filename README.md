@@ -1,19 +1,34 @@
 # esercizioSDCC
 
-## Run Docker Compose
-Per avviare l'ambiente con Docker Compose, eseguire il seguente comando nella cartella `esercizioSDCC`:
+Questo progetto implementa un sistema distribuito per eseguire operazioni MapReduce utilizzando Docker e Go.
+
+## Requisiti
+
+- **Docker** e **Docker Compose** installati.
+- **Go** (versione 1.19 o successiva) per modifiche e test locali.
+
+---
+
+## Come avviare il sistema
+
+### 1. Eseguire con Docker Compose
+
+Nella directory principale del progetto, eseguire:
 
 ```bash
 docker-compose up --build
 ```
 
+---
+
 ## Modifica del numero di worker
-Per aggiungere o rimuovere worker, è necessario modificare due sezioni del file `docker-compose.yml`.
 
-### 1. Comando del master
-- Aggiungere o rimuovere `nome:porto` nella parte `command` della sezione `master`.
+### 1. Aggiornare il comando del master
 
-Esempio:
+Nel file `docker-compose.yml`, modificare la parte `command` della sezione `master` per aggiungere o rimuovere indirizzi worker.
+
+**Esempio:**
+
 ```yaml
 command: >
   ./master
@@ -24,12 +39,15 @@ command: >
   -m
   40
 ```
-Se si aggiunge un worker, aggiungere `worker4:8000`.
 
-### 2. Sezione dei worker
-- Aggiungere o rimuovere la configurazione del worker nella sezione sotto gli altri worker.
+Per aggiungere un worker, includere un nuovo indirizzo come `worker4:8000`.
 
-Esempio di configurazione per un nuovo worker `worker4`:
+### 2. Aggiungere una nuova sezione per il worker
+
+Aggiungere la configurazione del worker nella sezione `services` di `docker-compose.yml`.
+
+**Esempio:**
+
 ```yaml
 worker4:
   build:
@@ -42,26 +60,75 @@ worker4:
     - WORKER_NAME=worker4
 ```
 
-## Arrestare i container
+---
+
+## Arrestare il sistema
+
 Per fermare e rimuovere tutti i container, eseguire:
 
 ```bash
 docker-compose down
 ```
 
-## Ispezionare il volume Docker
-Per visualizzare i dettagli del volume `eserciziosdcc_app-data`, eseguire:
+---
+
+## Ispezione dei dati generati
+
+### 1. Ispezionare il volume Docker
+
+Per visualizzare i dettagli del volume:
 
 ```bash
 docker volume inspect eserciziosdcc_app-data
 ```
 
-### Visualizzare i file nel volume
-1. Recuperare il percorso di `Mountpoint` dall'output del comando precedente.
-2. Eseguire:
+### 2. Visualizzare i file nel volume
+
+- Recuperare il percorso `Mountpoint` dall'output precedente.
+- Eseguire:
 
 ```bash
-sudo ls -l <mountPointDelVOlume>
+sudo ls -l <Mountpoint>
 ```
 
-Sostituire `<mountPointDelVOlume>` con il percorso effettivo del `Mountpoint`.
+---
+
+## Struttura del codice
+
+### File principali
+
+- **`master/main.go`**: Contiene la logica principale per orchestrare i worker.
+- **`master/utilis`**: Libreria di funzioni utili per la gestione di file e calcoli distribuiti.
+- **`worker/`**: Codice e configurazione per i container dei worker.
+
+---
+
+## Parametri principali
+
+- `-a`: Indirizzi dei worker, separati da virgola (es. `worker1:8000,worker2:8000`).
+- `-n`: Numero di interi generati casualmente.
+- `-m`: Valore massimo degli interi generati.
+
+---
+
+## Descrizione del flusso
+
+### Master
+
+1. Genera un file di numeri casuali.
+2. Suddivide i dati e li assegna ai worker.
+3. Raccoglie i risultati delle fasi Map e Reduce dai worker.
+
+### Worker
+
+1. Esegue la fase **Map** per identificare il valore minimo e massimo.
+2. Esegue la fase **Reduce** per consolidare i dati.
+
+I risultati finali vengono salvati in un file specificato in `configuration.FILE_NAME_REPLAY`.
+
+---
+
+## Debug e log
+
+Per abilitare il logging dettagliato, assicurarsi che `log.SetFlags` sia configurato correttamente nel codice del master.
+
