@@ -5,7 +5,7 @@ Questo progetto implementa un sistema distribuito per eseguire operazioni MapRed
 ## Requisiti
 
 - **Docker** e **Docker Compose** installati.
-- **Go** (versione 1.19 o successiva) per modifiche e test locali.
+- **Go** versione 1.23.4 o successiva.
 
 ---
 
@@ -21,9 +21,29 @@ docker-compose up --build
 
 ---
 
-## Modifica del numero di worker
+## Modificare il numero di workers 
 
-### 1. Aggiornare il comando del master
+
+### 1. Aggiungere/Rimuovere il servizio relativo al worker
+
+Aggiungere la configurazione del worker nella sezione `services` di `docker-compose.yml`.
+
+**Esempio:**
+
+```yaml
+worker4:
+  build:
+    context: ./worker
+  networks:
+    - internal_network
+  ports:
+    - "8004:8000"
+  environment:
+    - WORKER_NAME=worker4
+```
+
+
+### 2. Aggiornare il comando del master
 
 Nel file `docker-compose.yml`, modificare la parte `command` della sezione `master` per aggiungere o rimuovere indirizzi worker.
 
@@ -42,22 +62,14 @@ command: >
 
 Per aggiungere un worker, includere un nuovo indirizzo come `worker4:8000`.
 
-### 2. Aggiungere una nuova sezione per il worker
-
-Aggiungere la configurazione del worker nella sezione `services` di `docker-compose.yml`.
-
-**Esempio:**
+In seguito aggiungere la dipendeza da parte del master del nuovo worker.
 
 ```yaml
-worker4:
-  build:
-    context: ./worker
-  networks:
-    - internal_network
-  ports:
-    - "8004:8000"
-  environment:
-    - WORKER_NAME=worker4
+    depends_on:
+      - worker1
+      - worker2
+      - worker3
+      - worker4
 ```
 
 ---
@@ -93,21 +105,14 @@ sudo ls -l <Mountpoint>
 
 ---
 
-## Struttura del codice
-
-### File principali
-
-- **`master/main.go`**: Contiene la logica principale per orchestrare i worker.
-- **`master/utilis`**: Libreria di funzioni utili per la gestione di file e calcoli distribuiti.
-- **`worker/`**: Codice e configurazione per i container dei worker.
-
----
-
 ## Parametri principali
 
+### Master flags
 - `-a`: Indirizzi dei worker, separati da virgola (es. `worker1:8000,worker2:8000`).
 - `-n`: Numero di interi generati casualmente.
 - `-m`: Valore massimo degli interi generati.
+### Worker flags
+- `-p`: Indica la porta su cui ascoltare.
 
 ---
 
@@ -116,19 +121,15 @@ sudo ls -l <Mountpoint>
 ### Master
 
 1. Genera un file di numeri casuali.
-2. Suddivide i dati e li assegna ai worker.
-3. Raccoglie i risultati delle fasi Map e Reduce dai worker.
+2. Suddivide i dati in shard e li assegna ai worker.
+3. Sincronizza le fasi di map e reduce in modo che la seconda inizi solo dopo che la prima fase sia conclusa per tutti i worker.
 
 ### Worker
 
-1. Esegue la fase **Map** per identificare il valore minimo e massimo.
+1. Esegue la fase **Map** e aspetta lo shuffle delle chiavi.
 2. Esegue la fase **Reduce** per consolidare i dati.
 
 I risultati finali vengono salvati in un file specificato in `configuration.FILE_NAME_REPLAY`.
 
 ---
-
-## Debug e log
-
-Per abilitare il logging dettagliato, assicurarsi che `log.SetFlags` sia configurato correttamente nel codice del master.
 
